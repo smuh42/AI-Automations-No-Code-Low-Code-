@@ -1,7 +1,5 @@
 # LinkedIn Self-Learning Content System
 
-# LinkedIn Self-Learning Content System
-
 A closed-loop LinkedIn content engine that **generates posts, tracks real performance, and adapts its writing rules automatically** — built with n8n, Google Sheets, and free APIs.
 
 This is **not** a generic “AI post generator”.
@@ -18,7 +16,7 @@ It is a **rule-driven system that improves over time based on real LinkedIn view
 - Learns weekly by updating writing rules
 - Improves future posts automatically
 
-You still post manually on LinkedIn (safe & compliant).
+You still post manually on LinkedIn (safely and compliantly).
 
 ---
 
