@@ -1,0 +1,403 @@
+{
+  "name": "LinkedIn Content Creator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -944,
+        176
+      ],
+      "id": "cc4e2f5f-f305-4068-a384-0d64f65985cd",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "To Do"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -720,
+        176
+      ],
+      "id": "fea92912-cdf1-4d39-b5cb-1ea8d8bead3d",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yR0EWqhJpWhmvnB0",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $('Get row(s) in sheet').item.json.Topic }}\",\n  \"auto_parameters\": true,\n  \"topic\": \"general\",\n  \"search_depth\": \"basic\",\n  \"max_results\": 3,\n  \"include_answer\": false,\n  \"include_raw_content\": true,\n  \"chunks_per_source\": 2,\n  \"time_range\": \"year\",\n  \"include_images\": false,\n  \"include_domains\": [],\n  \"exclude_domains\": [\n    \"medium.com\",\n    \"substack.com\"\n  ],\n  \"include_usage\": false\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -272,
+        80
+      ],
+      "id": "9d457764-2b33-46cc-b075-28c676ad3923",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Topic: {{ $('Get row(s) in sheet').item.json.Topic }}\n\nResult 1:{{ $('HTTP Request').item.json.results[0].content }}\n\nResult 2:{{ $('HTTP Request').item.json.results[1].content }}\n\n\nResult 3:{{ $('HTTP Request').item.json.results[2].content }}\n",
+        "options": {
+          "systemMessage": "=## Current Posting Rules\n{{ $json.Rules }}\n\nYou must strictly follow the above rules when generating the LinkedIn post.\n\nYou are a LinkedIn content strategist for tech professionals.\n\nYou will receive:\n\na Topic\n\n3 web search results (each may contain noise)\n\nYour job:\n\nExtract the most useful insights.\n\nWrite a high-performing LinkedIn post that sounds human, confident, and opinionated.\n\nHard rules:\n\nDo NOT mention “articles”, “sources”, “web search”, “Tavily”, or “AI”.\n\nDo NOT invent facts or numbers. If no numbers are provided, avoid numbers.\n\nNo corporate fluff. No generic motivational lines.\n\nKeep it 120–180 words.\n\nUse short lines. Maximum 12–14 words per line.\n\nUse 1–2 emojis max (optional).\n\nAdd 1 mini-framework (e.g., “3 lessons”, “2 mistakes”, “1 checklist”) ONLY if it fits.\n\nEnd with one thoughtful question.\n\nAdd 6–10 relevant hashtags on the last line.\n\nStructure:\n\nHook (1–2 lines, scroll-stopping)\n\nInsight + mini-framework (bullets allowed)\n\nPractical takeaway\n\nQuestion\n\nHashtags\n\nOutput:\nReturn ONLY the final LinkedIn post text. No headings. No explanations. "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        176,
+        80
+      ],
+      "id": "ac11c3cc-5e8f-4d64-a1e2-96430567e1b4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        248,
+        304
+      ],
+      "id": "8e4f3cbb-7e92-4423-af7a-19fbedf92505",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "aob953mk5QOvaPvQ",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Topic": "={{ $('Get row(s) in sheet').item.json.Topic }}",
+            "Status": "Completed",
+            "Content": "={{ $json.output }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        80
+      ],
+      "id": "3746fa41-40c6-4f60-a4d0-391a5068ddbc",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yR0EWqhJpWhmvnB0",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41bf7ba1-ba12-4e6d-a63f-2ea2cadc92c7",
+              "leftValue": "={{ $json.Topic }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -496,
+        176
+      ],
+      "id": "20ddd233-33fe-46e1-b212-ee7586748079",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        272
+      ],
+      "id": "24846aa8-4661-4af5-8de7-c93054abaea3",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 674337287,
+          "mode": "list",
+          "cachedResultName": "WritingRules",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit#gid=674337287"
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -48,
+        80
+      ],
+      "id": "f0951321-685d-4428-b04e-6a3b17ababa0",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yR0EWqhJpWhmvnB0",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ebd336ef-b6bb-4c13-9f94-ff366ba07285",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cfa3eba2fb3501bcbdd82e0ab456c893be7e19ebc777abc9039ad2ca92cc269"
+  },
+  "id": "OPh48ojgI7SUMKsk",
+  "tags": []
+}

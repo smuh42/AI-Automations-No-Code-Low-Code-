@@ -1,0 +1,207 @@
+{
+  "name": "LinkedIn – Rules Learner (Weekly)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 23
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -272,
+        -160
+      ],
+      "id": "683d1a13-a2ca-4c23-a5d9-d5f3fb10ae65",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1258340007,
+          "mode": "list",
+          "cachedResultName": "PostPerformance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit#gid=1258340007"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -48,
+        -160
+      ],
+      "id": "bdc127ff-1417-4955-8260-099426098240",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yR0EWqhJpWhmvnB0",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: rows from PostPerformance\nconst rows = $input.all().map(i => i.json);\n\n// Keep only rows with numeric impressions\nconst data = rows\n  .map(r => ({\n    date: r.Date || r.date || \"\",\n    impressions: Number(r.Impressions ?? r.impressions ?? r.views ?? 0),\n  }))\n  .filter(r => Number.isFinite(r.impressions) && r.impressions > 0);\n\n// Sort by date if possible, otherwise keep order\n// (If your Date is ISO, sorting works well)\ndata.sort((a, b) => (a.date > b.date ? 1 : -1));\n\n// Take last 14 entries (to compare last 7 vs previous 7)\nconst last14 = data.slice(-14);\nconst prev7 = last14.slice(0, Math.max(0, last14.length - 7));\nconst last7 = last14.slice(Math.max(0, last14.length - 7));\n\nfunction avg(arr) {\n  if (!arr.length) return 0;\n  return arr.reduce((s, x) => s + x.impressions, 0) / arr.length;\n}\n\nconst last7Avg = avg(last7);\nconst prev7Avg = avg(prev7);\n\n// Basic learning rule:\n// If last7Avg is lower than prev7Avg by >= 10%, change HOOK style.\nconst dropThreshold = 0.10;\nconst dropped = prev7Avg > 0 && (prev7Avg - last7Avg) / prev7Avg >= dropThreshold;\n\n// Rotate between 3 hook styles (safe + visible changes)\nconst hookStyles = [\n  \"contrarian insight\",\n  \"data-backed statement\",\n  \"short personal story + lesson\",\n];\n\n// We'll choose hook style based on a simple rotation using week number\nconst weekIndex = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % hookStyles.length;\nlet hook = hookStyles[weekIndex];\n\n// If performance dropped, force a different hook than current rotation\nif (dropped) {\n  hook = hookStyles[(weekIndex + 1) % hookStyles.length];\n}\n\nconst rulesText =\n`Hook: ${hook}\nLength: 120-150 words\nTone: professional, opinionated\nCTA: question at the end\nHashtags: 3-5 niche tech hashtags\nEmojis: minimal (1-2)\nStructure: hook → insight → takeaway → CTA`;\n\nreturn [{\n  last7Avg: Math.round(last7Avg),\n  prev7Avg: Math.round(prev7Avg),\n  dropped,\n  rulesText,\n  updatedAt: new Date().toISOString(),\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -160
+      ],
+      "id": "317bad49-dc46-4819-a419-fc0108516587",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 674337287,
+          "mode": "list",
+          "cachedResultName": "WritingRules",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit#gid=674337287"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "1",
+            "Date": "={{ $json.updatedAt }}",
+            "Rules": "={{ $json.rulesText }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Rules",
+              "displayName": "Rules",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        -160
+      ],
+      "id": "d4387d3d-ae28-4873-b91b-c3339c19966d",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yR0EWqhJpWhmvnB0",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "8ff41456-7db1-4689-bf2d-290e86bf38ab",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cfa3eba2fb3501bcbdd82e0ab456c893be7e19ebc777abc9039ad2ca92cc269"
+  },
+  "id": "4xveyl1uuZP32TGQ",
+  "tags": []
+}

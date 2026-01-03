@@ -1,0 +1,194 @@
+{
+  "name": "LinkedIn – Post Performance",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "from:notifications-noreply@linkedin.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -144,
+        -48
+      ],
+      "id": "a5c7e546-b618-45bc-800d-77c67957ee25",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F5Dv7JjevduqXltL",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1258340007,
+          "mode": "list",
+          "cachedResultName": "PostPerformance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v6gNhd8itkMd9LMg20io_xF798-W5FTEkMh_J8dJmA0/edit#gid=1258340007"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{$json.timestamp}}\n",
+            "EmailSubject": "={{ $('Gmail Trigger').item.json.Subject }}",
+            "Impressions": "={{ $json.impressions }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Impressions",
+              "displayName": "Impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "EmailSubject",
+              "displayName": "EmailSubject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        -48
+      ],
+      "id": "ec5e0eb2-4eac-4dbe-9bbc-2afbf5874148",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yR0EWqhJpWhmvnB0",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Gmail uses base64url sometimes (- and _). Normalize it.\nfunction decodeBase64Url(data) {\n  if (!data) return \"\";\n  const normalized = data.replace(/-/g, \"+\").replace(/_/g, \"/\");\n  return Buffer.from(normalized, \"base64\").toString(\"utf8\");\n}\n\n// Recursively walk parts and collect text bodies\nfunction collectTextFromPayload(payload) {\n  let out = \"\";\n\n  if (!payload) return out;\n\n  // Some emails have body directly\n  if (payload.body && payload.body.data) {\n    out += \"\\n\" + decodeBase64Url(payload.body.data);\n  }\n\n  // Most emails have nested parts\n  if (payload.parts && Array.isArray(payload.parts)) {\n    for (const p of payload.parts) {\n      out += collectTextFromPayload(p);\n    }\n  }\n\n  return out;\n}\n\nconst subject = item.Subject || item.subject || \"\";\nconst payload = item.payload || item.Payload;\n\nconst bodyText = collectTextFromPayload(payload);\n\n// Combine subject + body\nconst text = `${subject}\\n${bodyText}`;\n\n// Flexible number extraction:\n// Handles \"199 Impressions\", \"Impressions 199\", line breaks, etc.\nfunction extractMetric(name) {\n  // 1) \"199 impressions\"\n  let m = text.match(new RegExp(String.raw`(\\d+)\\s*${name}s?`, \"i\"));\n  if (m) return parseInt(m[1], 10);\n\n  // 2) \"impressions 199\"\n  m = text.match(new RegExp(String.raw`${name}s?\\s*(\\d+)`, \"i\"));\n  if (m) return parseInt(m[1], 10);\n\n  return 0;\n}\n\nlet impressions = extractMetric(\"impression\");\nlet reactions = extractMetric(\"reaction\");\nlet comments = extractMetric(\"comment\");\n\n// Fallback for impressions from subject like \"199 views\"\nif (!impressions) {\n  const mv = subject.match(/(\\d+)\\s+views?/i);\n  if (mv) impressions = parseInt(mv[1], 10);\n}\n\nreturn [\n  {\n    impressions,\n    reactions,\n    comments,\n    subject,\n    timestamp: new Date().toISOString(),\n    // optional debug: keep short excerpt so you can confirm parsing sees content\n    debug_sample: text.slice(0, 300)\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        -48
+      ],
+      "id": "7c30785b-e508-42b4-9361-26fee644a626",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "1a8c020b-b794-4b0f-97f0-f8f54c0c1f67",
+      "name": "Get a message",
+      "webhookId": "3d7eb3db-8c44-4175-8d8e-74f5592ae701",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F5Dv7JjevduqXltL",
+          "name": "syedmuhammadsyed2006"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5574fa90-626f-4f16-aea4-a65ce1ccb288",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cfa3eba2fb3501bcbdd82e0ab456c893be7e19ebc777abc9039ad2ca92cc269"
+  },
+  "id": "JNv71hnp8JQkrw2o",
+  "tags": []
+}
